@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Guardián - Control Parental</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Tablero del auto -->
+        <div class="tablero">
+            <div class="velocimetro">
+                <div class="aguja" id="aguja"></div>
+                <div class="numeros">
+                    <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                </div>
+            </div>
+            <div class="odometro">
+                <span id="tiempoUso">0</span> minutos de uso hoy
+            </div>
+        </div>
+
+        <!-- Controles del auto guardián -->
+        <div class="controles">
+            <button class="btn-acelerar" onclick="acelerar()">⚡ ACELERAR (dar más tiempo)</button>
+            <button class="btn-frenar" onclick="frenar()">🛑 FRENAR (limitar tiempo)</button>
+            <button class="btn-ubicacion" onclick="verUbicacion()">📍 VER UBICACIÓN</button>
+            <button class="btn-bloquear" onclick="bloquearApp()">🔒 BLOQUEAR APP</button>
+        </div>
+
+        <!-- Panel de estado -->
+        <div class="panel" id="panel">
+            <h3>🚗 Estado del Auto Guardián</h3>
+            <p id="mensaje">Todo está tranquilo. El auto está patrullando.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html><link rel="manifest" href="manifest.json">
